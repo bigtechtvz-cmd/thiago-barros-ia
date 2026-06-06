@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: thiago-barros-ia
+    runtime: python
+    runtimeVersion: 3.11
+    buildCommand: "echo 'Ready to serve'"
+    startCommand: "python3 -m http.server 8080"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
