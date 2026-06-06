@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thiago Barros — IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:auto}
+body{background:#060408;color:#f0ece5;font-family:'Cormorant Garamond',Georgia,serif;overflow-x:hidden;cursor:none;-webkit-font-smoothing:antialiased}
+
+/* ── CUSTOM CURSOR ── */
+#cur{
+  position:fixed;z-index:9999;pointer-events:none;
+  width:8px;height:8px;border-radius:50%;
+  background:#f0ece5;
+  transform:translate(-50%,-50%);
+  mix-blend-mode:difference;
+  transition:width .2s,height .2s,opacity .2s;
+}
+#cur2{
+  position:fixed;z-index:9998;pointer-events:none;
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid rgba(240,236,229,.18);
+  transform:translate(-50%,-50%);
+}
+
+/* ── VIDEO ── */
+#vw{position:fixed;inset:0;z-index:0;overflow:hidden}
+#vid{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;object-position:center 20%;
+  transform:scale(1.06);
+  transform-origin:center center;
+  will-change:transform;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+/* Multi-layer cinematic grade */
+#vw::before{
+  content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:rgba(6,4,8,.18); /* subtle overall darkening */
+}
+#vw::after{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(to bottom,
+      rgba(6,4,8,.5) 0%,
+      rgba(6,4,8,.0) 18%,
+      rgba(6,4,8,.0) 72%,
+      rgba(6,4,8,.75) 100%
+    ),
+    radial-gradient(ellipse 80% 70% at 50% 50%,transparent 30%,rgba(6,4,8,.4) 100%);
+}
+
+/* ── LOADER ── */
+#ld{
+  position:fixed;inset:0;background:#060408;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity 1.8s cubic-bezier(.4,0,.2,1),visibility 1.8s;
+}
+#ld.out{opacity:0;visibility:hidden;pointer-events:none}
+.ld-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(28px,4vw,44px);font-weight:300;
+  letter-spacing:.25em;color:rgba(240,236,229,.12);
+  margin-bottom:40px;text-transform:uppercase;
+}
+.ld-track{width:200px;height:1px;background:rgba(240,236,229,.06);position:relative}
+.ld-fill{
+  position:absolute;left:0;top:0;bottom:0;width:0;
+  background:linear-gradient(to right,#ff4dac,#4dd4ff);
+  transition:width .06s linear;
+  box-shadow:0 0 12px rgba(255,77,172,.3);
+}
+.ld-pct{
+  font-family:'Space Mono',monospace;font-size:10px;
+  letter-spacing:.25em;color:rgba(240,236,229,.18);
+  margin-top:16px;text-align:center;
+}
+
+/* ── NAV ── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:300;
+  padding:clamp(20px,3vh,32px) clamp(24px,5vw,72px);
+  display:flex;justify-content:space-between;align-items:center;
+  opacity:0;transition:opacity 1s ease;
+}
+#nav.show{opacity:1}
+.nav-logo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(18px,2.2vw,26px);font-weight:300;
+  letter-spacing:.15em;color:rgba(240,236,229,.55);
+  text-transform:uppercase;
+}
+.nav-cta{
+  font-family:'Space Mono',monospace;font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(240,236,229,.45);text-decoration:none;
+  display:flex;align-items:center;gap:10px;
+  transition:color .25s;
+  padding:10px 0;
+}
+.nav-cta:hover{color:#f0ece5}
+.nav-cta-dot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#ff4dac,#4dd4ff);
+  box-shadow:0 0 8px rgba(255,77,172,.4);
+}
+
+/* ── SCROLL BODY ── */
+#scr{height:700vh;position:relative;z-index:1}
+
+/* ── SECTION INDICATOR ── */
+#sec-ind{
+  position:fixed;bottom:clamp(20px,3vh,36px);left:50%;transform:translateX(-50%);
+  z-index:200;
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.35em;
+  text-transform:uppercase;color:rgba(240,236,229,.28);
+  opacity:0;transition:opacity .5s ease;
+  pointer-events:none;
+}
+#sec-ind.show{opacity:1}
+
+/* ── PROGRESS BAR ── */
+#pb{
+  position:fixed;bottom:0;left:0;z-index:400;
+  height:2px;width:0;
+  background:linear-gradient(to right,#ff4dac,#4dd4ff);
+  box-shadow:0 0 10px rgba(255,77,172,.35);
+  transition:width .04s linear;
+}
+
+/* ── DOTS ── */
+#dots{
+  position:fixed;right:clamp(14px,2vw,24px);top:50%;transform:translateY(-50%);
+  z-index:200;display:flex;flex-direction:column;gap:10px;
+  opacity:0;transition:opacity .8s ease .5s;
+}
+#dots.show{opacity:1}
+.dt{
+  width:4px;height:4px;border-radius:50%;
+  background:rgba(240,236,229,.2);
+  transition:background .35s,transform .35s,box-shadow .35s;
+  cursor:pointer;
+}
+.dt.on{
+  background:#ff4dac;transform:scale(1.7);
+  box-shadow:0 0 10px rgba(255,77,172,.55);
+}
+
+/* ══════════════════════════════════════════
+   PANELS — position: fixed overlays
+══════════════════════════════════════════ */
+.pn{
+  position:fixed;inset:0;z-index:100;
+  pointer-events:none;
+  opacity:0;visibility:hidden;
+  transition:opacity .7s cubic-bezier(.4,0,.2,1),visibility .7s;
+}
+.pn.on{opacity:1;visibility:visible;pointer-events:auto}
+
+/* ── HERO ── full-bleed, text bottom-left ── */
+#ph{
+  display:flex;flex-direction:column;
+  justify-content:flex-end;
+  padding:0 clamp(24px,6vw,80px) clamp(80px,12vh,130px);
+}
+.ph-tag{
+  display:flex;align-items:center;gap:12px;
+  font-family:'Space Mono',monospace;font-size:10px;
+  letter-spacing:.38em;text-transform:uppercase;
+  color:rgba(240,236,229,.42);
+  margin-bottom:clamp(14px,2vh,22px);
+  opacity:0;transition:opacity .9s ease .4s;
+}
+.pn.on .ph-tag{opacity:1}
+.ph-tag-accent{width:28px;height:1px;background:linear-gradient(to right,#ff4dac,#4dd4ff)}
+
+/* Oversized editorial headline */
+.ph-h1{
+  font-size:clamp(64px,12vw,168px);
+  font-weight:300;line-height:.86;
+  letter-spacing:-.025em;color:#f0ece5;
+  /* Subtle text shadow for depth over video */
+  text-shadow:0 4px 48px rgba(6,4,8,.4);
+}
+.ph-line{display:block;overflow:hidden;padding-bottom:.2em;margin-bottom:-.2em}
+.ph-inner{
+  display:block;transform:translateY(115%);
+  transition:transform 1.15s cubic-bezier(.16,1,.3,1) .5s;
+}
+.ph-inner.d2{transition-delay:.68s}
+.pn.on .ph-inner{transform:translateY(0)}
+
+/* Gradient last word */
+.ph-h1 em{
+  font-style:normal;
+  background:linear-gradient(100deg,#f0ece5 45%,#ff4dac 75%,#4dd4ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.ph-sub{
+  margin-top:clamp(16px,2.5vh,28px);
+  font-size:clamp(15px,1.5vw,20px);font-weight:300;
+  color:rgba(240,236,229,.48);max-width:400px;line-height:1.62;
+  opacity:0;transform:translateY(14px);
+  transition:opacity .9s ease 1s,transform .9s ease 1s;
+}
+.pn.on .ph-sub{opacity:1;transform:translateY(0)}
+
+/* Scroll arrow bottom-right */
+.ph-arrow{
+  position:fixed;bottom:clamp(24px,4vh,44px);right:clamp(24px,4vw,56px);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  opacity:0;transition:opacity .9s ease 1.5s;
+}
+.pn.on .ph-arrow{opacity:1}
+.ph-arrow-line{
+  width:1px;height:56px;
+  background:linear-gradient(to bottom,transparent,rgba(255,77,172,.55));
+  animation:arrowPulse 2.5s ease-in-out infinite;
+}
+@keyframes arrowPulse{0%,100%{opacity:.3;transform:scaleY(.85)}50%{opacity:1;transform:scaleY(1)}}
+.ph-arrow-lbl{
+  font-family:'Space Mono',monospace;font-size:8px;
+  letter-spacing:.3em;text-transform:uppercase;color:rgba(240,236,229,.28);
+}
+
+/* ── ABOUT — anchored bottom-left, constrained width ── */
+#pa{
+  display:flex;align-items:flex-end;
+  padding:0 clamp(24px,6vw,80px) clamp(60px,10vh,110px);
+}
+.pa-card{
+  max-width:520px;
+  background:rgba(6,4,8,.78);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(240,236,229,.08);
+  border-top:2px solid transparent;
+  background-clip:padding-box;
+  padding:clamp(28px,4vw,48px);
+  position:relative;
+}
+/* Neon top border */
+.pa-card::before{
+  content:'';position:absolute;top:-2px;left:0;right:0;height:2px;
+  background:linear-gradient(to right,#ff4dac,#4dd4ff,transparent);
+}
+
+.sec-label{
+  font-family:'Space Mono',monospace;font-size:9px;
+  letter-spacing:.42em;text-transform:uppercase;
+  color:rgba(240,236,229,.3);display:block;margin-bottom:clamp(18px,2.5vh,28px);
+}
+.rv{opacity:0;transform:translateY(14px);transition:opacity .8s ease,transform .8s ease}
+.pn.on .rv{opacity:1;transform:translateY(0)}
+.pn.on .rv.d1{transition-delay:.12s}
+.pn.on .rv.d2{transition-delay:.24s}
+.pn.on .rv.d3{transition-delay:.36s}
+
+.pa-h{
+  font-size:clamp(24px,3vw,44px);font-weight:300;line-height:1.08;
+  letter-spacing:-.01em;margin-bottom:clamp(20px,3vh,32px);
+}
+.pa-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:rgba(240,236,229,.07);
+  margin-bottom:clamp(20px,3vh,32px);
+}
+@media(max-width:640px){.pa-stats{grid-template-columns:repeat(2,1fr)}}
+.pa-stat{
+  padding:clamp(10px,1.5vw,16px) clamp(8px,1.2vw,14px);
+  background:rgba(6,4,8,.6);
+}
+.pa-stat-n{
+  font-size:clamp(20px,2.5vw,32px);font-weight:300;
+  letter-spacing:-.02em;line-height:1;
+  background:linear-gradient(135deg,#f0ece5,#ff4dac);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.pa-stat-l{
+  font-family:'Space Mono',monospace;font-size:9px;
+  color:rgba(240,236,229,.32);margin-top:4px;line-height:1.4;
+}
+.pa-body{
+  font-size:clamp(13px,1.15vw,16px);color:rgba(240,236,229,.52);
+  line-height:1.82;font-weight:300;
+}
+.pa-body strong{color:rgba(240,236,229,.88);font-weight:400}
+.pa-body p+p{margin-top:12px}
+
+/* ── SERVICES — anchored bottom-right ── */
+#ps{
+  display:flex;align-items:flex-end;justify-content:flex-end;
+  padding:0 clamp(24px,6vw,80px) clamp(60px,10vh,110px);
+}
+.ps-card{
+  max-width:620px;width:100%;
+  background:rgba(6,4,8,.78);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(240,236,229,.08);
+  padding:clamp(28px,4vw,48px);
+  position:relative;
+}
+.ps-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(to right,#4dd4ff,#ff4dac,transparent);
+}
+.ps-h{
+  font-size:clamp(22px,2.8vw,40px);font-weight:300;line-height:1.08;
+  letter-spacing:-.01em;margin-bottom:clamp(20px,3vh,32px);
+}
+.ps-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:rgba(240,236,229,.07);
+}
+@media(max-width:600px){.ps-grid{grid-template-columns:1fr}}
+.ps-item{
+  padding:clamp(16px,2vw,24px) clamp(12px,1.5vw,18px);
+  background:rgba(6,4,8,.6);
+  transition:background .3s;
+}
+.ps-item:hover{background:rgba(77,212,255,.04)}
+.ps-num{
+  font-family:'Space Mono',monospace;font-size:9px;
+  letter-spacing:.25em;color:rgba(240,236,229,.22);margin-bottom:10px;
+}
+.ps-title{
+  font-size:clamp(14px,1.4vw,18px);font-weight:400;
+  line-height:1.2;margin-bottom:8px;letter-spacing:-.01em;
+}
+.ps-desc{
+  font-family:'Space Mono',monospace;font-size:9px;
+  color:rgba(240,236,229,.38);line-height:1.65;
+}
+
+/* ── CTA — centered, dramatic ── */
+#pc{
+  display:flex;align-items:center;justify-content:center;
+  padding:clamp(24px,5vw,72px);
+}
+.pc-card{
+  max-width:640px;width:100%;
+  background:rgba(6,4,8,.84);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border:1px solid rgba(240,236,229,.08);
+  padding:clamp(40px,6vw,72px);
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+/* Neon top + bottom lines */
+.pc-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(to right,transparent 5%,#ff4dac 40%,#4dd4ff 60%,transparent 95%);
+}
+.pc-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(to right,transparent 15%,rgba(255,77,172,.25) 40%,rgba(77,212,255,.25) 60%,transparent 85%);
+}
+/* Ambient glow */
+.pc-card-glow{
+  position:absolute;top:-40%;left:50%;transform:translateX(-50%);
+  width:80%;height:60%;
+  background:radial-gradient(ellipse at center,rgba(255,77,172,.07),transparent 70%);
+  pointer-events:none;
+}
+.pc-h{
+  font-size:clamp(36px,5.5vw,80px);font-weight:300;
+  line-height:.94;letter-spacing:-.02em;
+  margin-bottom:clamp(14px,2vh,22px);
+}
+.pc-h em{
+  font-style:italic;font-weight:300;
+  background:linear-gradient(100deg,#f0ece5,#ff4dac);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.pc-sub{
+  font-size:clamp(13px,1.15vw,16px);color:rgba(240,236,229,.46);
+  line-height:1.75;font-weight:300;
+  max-width:380px;margin:0 auto clamp(28px,4vh,44px);
+}
+/* Button — outlined neon */
+.btn-cta{
+  display:inline-flex;align-items:center;gap:12px;
+  padding:clamp(13px,1.5vh,17px) clamp(28px,4vw,44px);
+  font-family:'Space Mono',monospace;font-size:10px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:#f0ece5;text-decoration:none;
+  border:1px solid rgba(255,77,172,.35);
+  background:rgba(255,77,172,.06);
+  position:relative;overflow:hidden;
+  transition:border-color .3s,background .3s,box-shadow .3s,transform .25s;
+  pointer-events:auto;
+}
+.btn-cta:hover{
+  border-color:rgba(255,77,172,.7);
+  background:rgba(255,77,172,.1);
+  box-shadow:0 0 30px rgba(255,77,172,.15),0 0 60px rgba(77,212,255,.08);
+  transform:translateY(-2px);
+}
+.btn-cta svg{transition:transform .2s}
+.btn-cta:hover svg{transform:translateX(5px)}
+
+/* ── MOBILE ── */
+@media(max-width:640px){
+  /* Esconde dots, logo e link de contato na nav */
+  #dots{display:none}
+  .nav-logo{display:none}
+  .nav-cta{display:none}
+
+
+  /* Hero: título menor, mais espaço embaixo pro subtítulo aparecer */
+  #ph{padding:0 clamp(20px,5vw,32px) clamp(100px,18vh,140px)}
+  .ph-h1{font-size:clamp(56px,18vw,80px);line-height:.9}
+  .ph-sub{max-width:100%;font-size:15px}
+  .ph-arrow{right:20px;bottom:20px}
+
+  /* About: card full-width */
+  #pa{padding:0 16px clamp(60px,10vh,100px)}
+  .pa-card{max-width:100%}
+
+  /* Services: centralizado e full-width */
+  #ps{justify-content:center;padding:0 16px clamp(60px,10vh,100px)}
+  .ps-card{max-width:100%}
+  /* grid já vai pra 1 coluna pelo media query existente */
+
+  /* CTA: padding menor lateral */
+  #pc{padding:16px}
+  .pc-card{padding:clamp(32px,6vw,48px) clamp(20px,5vw,40px)}
+  .btn-cta{width:100%;justify-content:center}
+}
+/* ─────────────────────────────────────────── */
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur2"></div>
+
+<!-- LOADER -->
+<div id="ld">
+  <div class="ld-brand">Thiago Barros</div>
+  <div class="ld-track"><div class="ld-fill" id="lf"></div></div>
+  <div class="ld-pct" id="lpct">0%</div>
+</div>
+
+<!-- VIDEO -->
+<div id="vw">
+  <video id="vid" muted playsinline preload="auto" src="pantheon.mp4"></video>
+</div>
+
+<!-- CHROME -->
+<div id="pb"></div>
+<div id="sec-ind"></div>
+
+<nav id="nav">
+  <div></div>
+  <a href="#" class="nav-cta" id="nav-cta">
+    <span class="nav-cta-dot"></span>Contato
+  </a>
+</nav>
+
+<div id="dots">
+  <div class="dt on" data-sec="0"></div>
+  <div class="dt" data-sec="1"></div>
+  <div class="dt" data-sec="2"></div>
+  <div class="dt" data-sec="3"></div>
+</div>
+
+<div id="scr"></div>
+
+<!-- ── HERO ── -->
+<div class="pn on" id="ph">
+  <div class="ph-tag">
+    <span class="ph-tag-accent"></span>
+    Especialista em Inteligência Artificial
+  </div>
+  <h1 class="ph-h1">
+    <span class="ph-line"><span class="ph-inner">Thiago</span></span>
+    <span class="ph-line"><span class="ph-inner d2"><em>Barros</em></span></span>
+  </h1>
+  <p class="ph-sub">Transformando a maneira como pessoas e empresas entendem e aplicam IA no mundo real.</p>
+  <div class="ph-arrow">
+    <div class="ph-arrow-line"></div>
+    <span class="ph-arrow-lbl">Scroll</span>
+  </div>
+</div>
+
+<!-- ── ABOUT ── -->
+<div class="pn" id="pa">
+  <div class="pa-card">
+    <span class="sec-label">Sobre</span>
+    <h2 class="pa-h rv">A sabedoria antiga.<br>A tecnologia do futuro.</h2>
+    <div class="pa-stats rv d1">
+      <div class="pa-stat"><div class="pa-stat-n">500+</div><div class="pa-stat-l">Pessoas treinadas</div></div>
+      <div class="pa-stat"><div class="pa-stat-n">3+</div><div class="pa-stat-l">Anos em IA</div></div>
+      <div class="pa-stat"><div class="pa-stat-n">10×</div><div class="pa-stat-l">Produtividade</div></div>
+      <div class="pa-stat"><div class="pa-stat-n">100%</div><div class="pa-stat-l">Prático</div></div>
+    </div>
+    <div class="pa-body rv d2">
+      <p>Meu nome é <strong>Thiago Barros</strong>. Ajudo pessoas e empresas a pararem de temer a IA e começarem a usá-la como <strong>vantagem competitiva real</strong>.</p>
+      <p>Não ensino teoria. Ensino o que funciona agora — ferramentas testadas, resultados que você aplica no dia seguinte.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── SERVICES ── -->
+<div class="pn" id="ps">
+  <div class="ps-card">
+    <span class="sec-label">O que eu ensino</span>
+    <h2 class="ps-h rv">IA na prática,<br>sem enrolação.</h2>
+    <div class="ps-grid rv d1">
+      <div class="ps-item">
+        <div class="ps-num">01</div>
+        <div class="ps-title">IA para Negócios</div>
+        <div class="ps-desc">Automatize processos e escale resultados sem programar.</div>
+      </div>
+      <div class="ps-item">
+        <div class="ps-num">02</div>
+        <div class="ps-title">Criação com IA</div>
+        <div class="ps-desc">Textos, imagens, vídeos. Produza 10× mais rápido.</div>
+      </div>
+      <div class="ps-item">
+        <div class="ps-num">03</div>
+        <div class="ps-title">Treinamentos</div>
+        <div class="ps-desc">Capacitação de equipes. Metodologia adaptada.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CTA ── -->
+<div class="pn" id="pc">
+  <div class="pc-card">
+    <div class="pc-card-glow"></div>
+    <span class="sec-label" style="text-align:center;margin-bottom:clamp(12px,2vh,20px)">Contato</span>
+    <h2 class="pc-h rv">Vamos trabalhar<br><em>juntos?</em></h2>
+    <p class="pc-sub rv d1">Aprenda IA na prática, treine sua equipe ou aplique no seu negócio.</p>
+    <a href="https://wa.me/5571991054484" target="_blank" class="btn-cta rv d2">
+      Contato via WhatsApp
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── CURSOR ── */
+var cur=document.getElementById('cur'),cur2=document.getElementById('cur2');
+var mx=-200,my=-200,rx=-200,ry=-200;
+document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY});
+(function t(){
+  requestAnimationFrame(t);
+  cur.style.left=mx+'px';cur.style.top=my+'px';
+  rx+=(mx-rx)*.08;ry+=(my-ry)*.08;
+  cur2.style.left=rx+'px';cur2.style.top=ry+'px';
+})();
+
+/* ── VIDEO ── */
+var vid=document.getElementById('vid');
+vid.pause();
+var vidOk=false,ldOk=false;
+function tryLaunch(){if(vidOk&&ldOk)launch()}
+vid.addEventListener('canplaythrough',function(){vidOk=true;tryLaunch()},{once:true});
+setTimeout(function(){if(!vidOk){vidOk=true;tryLaunch()}},2500);
+
+/* ── LOADER ── */
+var lf=document.getElementById('lf'),lpct=document.getElementById('lpct'),ldEl=document.getElementById('ld');
+var lv=0,ltv=setInterval(function(){
+  lv+=Math.random()*7+2;
+  if(lv>=100){lv=100;lf.style.width='100%';lpct.textContent='100%';clearInterval(ltv);ldOk=true;tryLaunch()}
+  else{lf.style.width=lv+'%';lpct.textContent=Math.floor(lv)+'%'}
+},60);
+
+/* ── SECTIONS ── */
+var PANELS=['ph','pa','ps','pc'];
+var ZONES=[[0,.22],[.22,.50],[.50,.75],[.75,1.0]];
+var LABELS=['','Sobre mim','Serviços','Contato'];
+var cur_sec=0;
+var secInd=document.getElementById('sec-ind');
+
+function goSec(idx){
+  if(idx===cur_sec)return;
+  document.getElementById(PANELS[cur_sec]).classList.remove('on');
+  cur_sec=idx;
+  document.getElementById(PANELS[idx]).classList.add('on');
+  // Dots
+  document.querySelectorAll('.dt').forEach(function(d,i){d.classList.toggle('on',i===idx)});
+  // Section label
+  if(LABELS[idx]){secInd.textContent=LABELS[idx];secInd.classList.add('show')}
+  else{secInd.classList.remove('show')}
+}
+
+/* ── SCROLL ── */
+window.addEventListener('scroll',function(){
+  var ms=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+  var p=Math.max(0,Math.min(1,window.scrollY/ms));
+  if(vid.duration)vid.currentTime=p*vid.duration;
+  // Progress bar
+  document.getElementById('pb').style.width=(p*100)+'%';
+  // Sections
+  for(var i=0;i<ZONES.length;i++){
+    if(p>=ZONES[i][0]&&(p<ZONES[i][1]||(i===ZONES.length-1))){goSec(i);break}
+  }
+},{passive:true});
+
+/* ── DOT CLICKS ── */
+document.querySelectorAll('.dt').forEach(function(d){
+  d.addEventListener('click',function(){
+    var idx=parseInt(this.dataset.sec);
+    var ms=document.documentElement.scrollHeight-window.innerHeight;
+    var mid=(ZONES[idx][0]+ZONES[idx][1])/2;
+    window.scrollTo({top:mid*ms,behavior:'smooth'});
+  });
+});
+
+/* ── NAV CTA ── */
+document.getElementById('nav-cta').addEventListener('click',function(e){
+  e.preventDefault();
+  var ms=document.documentElement.scrollHeight-window.innerHeight;
+  window.scrollTo({top:ms*.875,behavior:'smooth'});
+});
+
+/* ── MOUSE PARALLAX ── */
+var pX=0,pY=0,tX=0,tY=0;
+document.addEventListener('mousemove',function(e){
+  var mxN=e.clientX/window.innerWidth-.5;
+  var myN=e.clientY/window.innerHeight-.5;
+  tX=mxN*-window.innerWidth*.028;
+  tY=myN*-window.innerHeight*.028;
+});
+(function loop(){
+  requestAnimationFrame(loop);
+  pX+=(tX-pX)*.038;pY+=(tY-pY)*.038;
+  vid.style.transform='scale(1.06) translate('+(pX/1.06).toFixed(2)+'px,'+(pY/1.06).toFixed(2)+'px)';
+})();
+
+/* ── LAUNCH ── */
+function launch(){
+  ldEl.classList.add('out');
+  setTimeout(function(){
+    document.getElementById('nav').classList.add('show');
+    document.getElementById('dots').classList.add('show');
+  },350);
+}
+
+})();
+</script>
+</body>
+</html>
