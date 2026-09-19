@@ -568,7 +568,16 @@ document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY});
 
 /* ── VIDEO ── */
 var vid=document.getElementById('vid');
-vid.pause();
+/* Mobile browsers decode no frames until play() has run once, so a video that is
+   only ever scrubbed by scroll stays black. Start it, then pause on frame one. */
+function primeVideo(){
+  var p=vid.play();
+  if(p&&p.then)p.then(function(){vid.pause()}).catch(function(){
+    document.addEventListener('touchstart',primeVideo,{once:true,passive:true});
+  });
+  else vid.pause();
+}
+primeVideo();
 var vidOk=false,ldOk=false;
 function tryLaunch(){if(vidOk&&ldOk)launch()}
 vid.addEventListener('canplaythrough',function(){vidOk=true;tryLaunch()},{once:true});
